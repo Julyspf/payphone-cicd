@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>TechHub Store - PayPhone v2.0</title>
+
+  <!-- Dependencias oficiales de Payphone Cajita de Pagos v2.0 -->
+  <script
+    src="https://cdn.payphonetodoesposible.com/box/v2.0/payphone-payment-box.js"
+    type="module">
+  </script>
+
+  <link
+    href="https://cdn.payphonetodoesposible.com/box/v2.0/payphone-payment-box.css"
+    rel="stylesheet"
+  >
+
+  <!-- Tailwind para diseño visual -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-900 min-h-screen p-4 md:p-8 font-sans text-slate-100">
+
+  <div class="max-w-6xl mx-auto bg-slate-800 rounded-2xl shadow-2xl overflow-hidden grid grid-cols-1 md:grid-cols-3 border border-slate-700">
+
+    <!-- Sección de productos -->
+    <div class="p-6 md:col-span-2 border-r border-slate-700">
+
+      <div class="flex items-center justify-between mb-6">
+
+        <div>
+          <h2 class="text-2xl font-black text-indigo-400 mb-1">
+            💻 TechHub Store
+          </h2>
+
+          <p class="text-xs text-slate-400">
+            Manta, Ecuador — Componentes & Software
+          </p>
+        </div>
+
+        <span class="bg-indigo-500/10 text-indigo-400 text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full border border-indigo-500/20">
+          Premium Tech
+        </span>
+
+      </div>
+
+      <div
+        id="productos-container"
+        class="grid grid-cols-1 sm:grid-cols-2 gap-4"
+      ></div>
+
+    </div>
+
+    <!-- Sección del carrito -->
+    <div class="p-6 flex flex-col justify-between bg-slate-800/50">
+
+      <div>
+
+        <h3 class="text-lg font-bold text-slate-200 mb-4 border-b border-slate-700 pb-2 flex items-center justify-between">
+          <span>Resumen de Orden</span>
+          <span class="text-xs text-slate-400 font-normal">Carrito</span>
+        </h3>
+
+        <div
+          id="lista-carrito"
+          class="space-y-3 max-h-64 overflow-y-auto mb-4 text-xs pr-1"
+        >
+          <p
+            class="text-slate-500 text-center py-8 italic"
+            id="carrito-vacio"
+          >
+            No has seleccionado ningún componente
+          </p>
+        </div>
+
+        <div class="space-y-2 text-xs mb-6 bg-slate-900/50 p-4 rounded-xl border border-slate-700/60">
+
+          <div class="flex justify-between text-slate-400">
+            <span>Subtotal 0%:</span>
+            <span id="cart-subtotal-0" class="font-mono">$0.00</span>
+          </div>
+
+          <div class="flex justify-between text-slate-400">
+            <span>Subtotal 15%:</span>
+            <span id="cart-subtotal-15" class="font-mono">$0.00</span>
+          </div>
+
+          <div class="flex justify-between text-slate-400">
+            <span>IVA 15%:</span>
+            <span id="cart-iva" class="font-mono">$0.00</span>
+          </div>
+
+          <div class="flex justify-between border-t border-slate-700 pt-2.5 mt-2.5 font-bold text-base text-slate-200">
+            <span>Total Global:</span>
+            <span id="cart-total" class="text-indigo-400 font-mono">$0.00</span>
+          </div>
+
+        </div>
+
+      </div>
+
+      <div id="checkout-container" class="space-y-4">
+
+        <button
+          id="btn-proceder"
+          onclick="inicializarPagoPayPhone()"
+          disabled
+          class="w-full bg-indigo-600 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed disabled:shadow-none hover:bg-indigo-500 text-white font-bold py-3 px-4 rounded-xl transition duration-200 shadow-lg shadow-indigo-600/30 text-sm"
+        >
+          Proceder a la Pasarela
+        </button>
+
+        <div
+          id="pp-button"
+          class="w-full hidden bg-slate-900 p-2 rounded-xl border border-slate-700"
+        ></div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+
+    /*
+      Catálogo convertido desde PHP a JavaScript
+      para que funcione en GitHub Pages.
+      Los precios están en centavos.
+    */
+
+    const productos = [
+
+      {
+        id: 1,
+        nombre: "Teclado Mecánico RGB Pro",
+        precio_centavos: 3500,
+        subtotal: 3043,
+        iva: 457
+      },
+
+      {
+        id: 2,
+        nombre: "Licencia OS Digital Pack",
+        precio_centavos: 2400,
+        subtotal: 2400,
+        iva: 0
+      },
+
+      {
+        id: 3,
+        nombre: "Mouse Gamer Inalámbrico 16k",
+        precio_centavos: 4500,
+        subtotal: 3913,
+        iva: 587
+      },
+
+      {
+        id: 4,
+        nombre: "Suscripción Dev Cloud 1 Mes",
+        precio_centavos: 1100,
+        subtotal: 1100,
+        iva: 0
+      },
+
+      {
+        id: 5,
+        nombre: "Hub USB-C de Aluminio 5 en 1",
+        precio_centavos: 1800,
+        subtotal: 1565,
+        iva: 235
+      }
+
+    ];
+
+    let carrito = [];
+    let ppbInstance = null;
+
+    const CONFIG = {
+
+      /*
+        El pipeline reemplazará este marcador
+        con el Secret PAYPHONE_TOKEN.
+      */
+
+      token: "__PAYPHONE_TOKEN__",
+
+      /*
+        Store ID de la aplicación Payphone.
+      */
+
+      storeId: "4afe8823-943d-4c2c-b909-4bf627fcb452"
+
+    };
+
+    function renderizarProductos() {
+
+      const container =
+        document.getElementById("productos-container");
+
+      container.innerHTML = "";
+
+      productos.forEach(function (prod) {
+
+        container.innerHTML += `
+
+          <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow-sm flex flex-col justify-between hover:border-slate-600 transition-colors">
+
+            <div>
+
+              <h3 class="font-bold text-slate-200 text-sm mb-1">
+                ${prod.nombre}
+              </h3>
+
+              <span class="text-xl font-black text-white block mb-4">
+                $${(prod.precio_centavos / 100).toFixed(2)}
+              </span>
+
+            </div>
+
+            <button
+              onclick="agregarAlCarrito(
+                ${prod.id},
+                '${prod.nombre}',
+                ${prod.precio_centavos},
+                ${prod.subtotal},
+                ${prod.iva}
+              )"
+              class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 px-3 rounded-lg text-xs transition duration-200 shadow-lg shadow-indigo-600/20"
+            >
+              + Añadir al Carrito
+            </button>
+
+          </div>
+
+        `;
+
+      });
+
+    }
+
+    function agregarAlCarrito(
+      id,
+      nombre,
+      total,
+      subtotal,
+      iva
+    ) {
+
+      document
+        .getElementById("pp-button")
+        .classList
+        .add("hidden");
+
+      document
+        .getElementById("btn-proceder")
+        .classList
+        .remove("hidden");
+
+      const itemExistente =
+        carrito.find(function (producto) {
+          return producto.id === id;
+        });
+
+      if (itemExistente) {
+
+        itemExistente.cantidad++;
+
+      } else {
+
+        carrito.push({
+          id: id,
+          nombre: nombre,
+          total: total,
+          subtotal: subtotal,
+          iva: iva,
+          cantidad: 1
+        });
+
+      }
+
+      renderizarCarrito();
+
+    }
+
+    function eliminarDelCarrito(id) {
+
+      document
+        .getElementById("pp-button")
+        .classList
+        .add("hidden");
+
+      document
+        .getElementById("btn-proceder")
+        .classList
+        .remove("hidden");
+
+      carrito =
+        carrito.filter(function (producto) {
+          return producto.id !== id;
+        });
+
+      renderizarCarrito();
+
+    }
+
+    function renderizarCarrito() {
+
+      const container =
+        document.getElementById("lista-carrito");
+
+      container.innerHTML = "";
+
+      if (carrito.length === 0) {
+
+        container.innerHTML = `
+          <p class="text-slate-500 text-center py-8 italic" id="carrito-vacio">
+            No has seleccionado ningún componente
+          </p>
+        `;
+
+        document
+          .getElementById("btn-proceder")
+          .disabled = true;
+
+        actualizarValores(0, 0, 0, 0);
+
+        return;
+
+      }
+
+      document
+        .getElementById("btn-proceder")
+        .disabled = false;
+
+      let totalAcumulado = 0;
+      let subtotal0Acumulado = 0;
+      let subtotal15Acumulado = 0;
+      let ivaAcumulado = 0;
+
+      carrito.forEach(function (producto) {
+
+        const itemTotal =
+          producto.total * producto.cantidad;
+
+        totalAcumulado += itemTotal;
+
+        if (producto.iva === 0) {
+
+          subtotal0Acumulado +=
+            producto.total * producto.cantidad;
+
+        } else {
+
+          subtotal15Acumulado +=
+            producto.subtotal * producto.cantidad;
+
+          ivaAcumulado +=
+            producto.iva * producto.cantidad;
+
+        }
+
+        container.innerHTML += `
+
+          <div class="flex justify-between items-center bg-slate-900/40 p-2.5 rounded-lg border border-slate-700/50">
+
+            <div>
+
+              <p class="font-bold text-slate-200">
+                ${producto.nombre}
+              </p>
+
+              <p class="text-slate-400 text-[10px]">
+                ${producto.cantidad}x - $${(producto.total / 100).toFixed(2)} c/u
+              </p>
+
+            </div>
+
+            <div class="flex items-center gap-2">
+
+              <span class="font-bold text-slate-300 font-mono">
+                $${(itemTotal / 100).toFixed(2)}
+              </span>
+
+              <button
+                onclick="eliminarDelCarrito(${producto.id})"
+                class="text-rose-400 hover:text-rose-300 font-bold px-1 text-sm transition-colors"
+              >
+                ×
+              </button>
+
+            </div>
+
+          </div>
+
+        `;
+
+      });
+
+      actualizarValores(
+        totalAcumulado,
+        subtotal0Acumulado,
+        subtotal15Acumulado,
+        ivaAcumulado
+      );
+
+    }
+
+    function actualizarValores(
+      total,
+      sub0,
+      sub15,
+      iva
+    ) {
+
+      document.getElementById("cart-total").innerText =
+        "$" + (total / 100).toFixed(2);
+
+      document.getElementById("cart-subtotal-0").innerText =
+        "$" + (sub0 / 100).toFixed(2);
+
+      document.getElementById("cart-subtotal-15").innerText =
+        "$" + (sub15 / 100).toFixed(2);
+
+      document.getElementById("cart-iva").innerText =
+        "$" + (iva / 100).toFixed(2);
+
+      const btn =
+        document.getElementById("btn-proceder");
+
+      btn.setAttribute("data-total", total);
+      btn.setAttribute("data-sub0", sub0);
+      btn.setAttribute("data-sub15", sub15);
+      btn.setAttribute("data-iva", iva);
+
+    }
+
+    function inicializarPagoPayPhone() {
+
+      if (
+        typeof PPaymentButtonBox === "undefined"
+      ) {
+
+        alert(
+          "No se pudo cargar la Cajita de Pagos de Payphone."
+        );
+
+        return;
+
+      }
+
+      const btn =
+        document.getElementById("btn-proceder");
+
+      const total =
+        parseInt(
+          btn.getAttribute("data-total"),
+          10
+        );
+
+      const sub0 =
+        parseInt(
+          btn.getAttribute("data-sub0"),
+          10
+        );
+
+      const sub15 =
+        parseInt(
+          btn.getAttribute("data-sub15"),
+          10
+        );
+
+      const iva =
+        parseInt(
+          btn.getAttribute("data-iva"),
+          10
+        );
+
+      btn.classList.add("hidden");
+
+      const ppButtonDiv =
+        document.getElementById("pp-button");
+
+      ppButtonDiv.innerHTML = "";
+      ppButtonDiv.classList.remove("hidden");
+
+      ppbInstance =
+        new PPaymentButtonBox({
+
+          token: CONFIG.token,
+
+          storeId: CONFIG.storeId,
+
+          clientTransactionId:
+            "TX-" + Date.now(),
+
+          amount: total,
+
+          amountWithoutTax: sub0,
+
+          amountWithTax: sub15,
+
+          tax: iva,
+
+          currency: "USD",
+
+          reference:
+            "Compra consolidada - TechHub Store",
+
+          lang: "es"
+
+        });
+
+      ppbInstance.render("pp-button");
+
+    }
+
+    renderizarProductos();
+
+  </script>
+
+</body>
+</html>

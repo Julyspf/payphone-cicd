@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Resultado del Pago</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+  <div class="bg-white p-8 rounded-xl shadow-md max-w-md w-full text-center">
+
+    <div id="icono" class="mb-4"></div>
+
+    <h1
+      id="titulo"
+      class="text-2xl font-bold text-gray-800 mb-2"
+    >
+      Verificando pago...
+    </h1>
+
+    <p
+      id="mensaje"
+      class="text-gray-600 text-sm mb-6"
+    >
+      Estamos leyendo el resultado de la transacción.
+    </p>
+
+    <div
+      id="detalle"
+      class="bg-gray-50 p-4 rounded-lg text-left text-xs font-mono text-gray-700 space-y-2 hidden"
+    >
+      <p>
+        <strong>ID Transacción:</strong>
+        <span id="id-transaccion">-</span>
+      </p>
+
+      <p>
+        <strong>ID Referencia:</strong>
+        <span id="id-referencia">-</span>
+      </p>
+
+      <p>
+        <strong>Estado API:</strong>
+        <span id="estado-api">-</span>
+      </p>
+    </div>
+
+    <a
+      href="index.html"
+      id="btn-volver"
+      class="hidden mt-6 inline-block bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-6 rounded-lg transition duration-200"
+    >
+      Intentar de nuevo
+    </a>
+
+  </div>
+
+  <script>
+    // Capturamos los parámetros que PayPhone adjunta en la URL
+    const params = new URLSearchParams(window.location.search);
+
+    const id = params.get("id");
+    const clientTransactionId = params.get("clientTransactionId");
+    const status = params.get("status");
+
+    const icono = document.getElementById("icono");
+    const titulo = document.getElementById("titulo");
+    const mensaje = document.getElementById("mensaje");
+    const detalle = document.getElementById("detalle");
+    const btnVolver = document.getElementById("btn-volver");
+
+    const idTransaccion = document.getElementById("id-transaccion");
+    const idReferencia = document.getElementById("id-referencia");
+    const estadoApi = document.getElementById("estado-api");
+
+    function mostrarDetalle() {
+      idTransaccion.textContent = id || "-";
+      idReferencia.textContent = clientTransactionId || "-";
+      estadoApi.textContent = status || "No recibido";
+
+      detalle.classList.remove("hidden");
+    }
+
+    function mostrarPagoAprobado() {
+      icono.className = "text-green-500 mb-4";
+
+      icono.innerHTML = `
+        <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z">
+          </path>
+        </svg>
+      `;
+
+      titulo.textContent = "¡Pago Aprobado!";
+
+      mensaje.textContent =
+        "La transacción ha sido procesada de manera exitosa en el entorno Sandbox.";
+
+      mostrarDetalle();
+    }
+
+    function mostrarPagoNoAprobado() {
+      icono.className = "text-red-500 mb-4";
+
+      icono.innerHTML = `
+        <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z">
+          </path>
+        </svg>
+      `;
+
+      titulo.textContent = "Pago No Aprobado";
+
+      mensaje.textContent =
+        "La transacción fue cancelada o rechazada por la pasarela.";
+
+      mostrarDetalle();
+
+      btnVolver.classList.remove("hidden");
+    }
+
+    // Validamos el estado recibido desde PayPhone
+    if (status === "Approved" || status === "3") {
+      mostrarPagoAprobado();
+    } else {
+      mostrarPagoNoAprobado();
+    }
+  </script>
+
+</body>
+</html>
